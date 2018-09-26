@@ -1,0 +1,179 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.25">
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>Git_URL</name>
+          <description></description>
+          <defaultValue>Your Git URL</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BRANCH_TO_CHECKOUT</name>
+          <description></description>
+          <defaultValue>Your Branch Name to checkout</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>USERNAME_APPSTORE</name>
+          <description></description>
+          <defaultValue>Your user name</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.PasswordParameterDefinition>
+          <name>PASSWORD</name>
+          <description></description>
+          <defaultValue>{AQAAABAAAAAQjM0zdqDpN/Q4dw8ow1Qrmxd83nFN28B8N29oeggLZzQ=}</defaultValue>
+        </hudson.model.PasswordParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>ARCHIVE_PATH</name>
+          <description>Path to where you want  archive to be generated.</description>
+          <defaultValue>~/Desktop</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>IPA_PATH</name>
+          <description>Path to where you want Ipa to be generated.</description>
+          <defaultValue>~/Desktop</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <org.biouno.unochoice.ChoiceParameter plugin="uno-choice@2.1">
+          <name>SCHEME_TYPE</name>
+          <description></description>
+          <randomName>choice-parameter-184987776059343</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.46">
+              <script>return [ 
+&apos;Debug&apos;,
+&apos;Release&apos;
+ ]</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.46">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>iOS_Builds</projectName>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.ChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@2.1">
+          <name>SCHEME_NAME</name>
+          <description></description>
+          <randomName>choice-parameter-184987786555638</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.46">
+              <script>if (SCHEME_TYPE.equals(&quot;Release&quot;)) {
+ return [&quot;YourReleaseSchemeName&quot;]
+} else if (SCHEME_TYPE.equals(&quot;Debug&quot;)) {
+ return [&quot;YourDebugSchemeName&quot;]
+}else{
+   return [&quot;Scheme not Set&quot;]
+}</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.46">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>iOS_Builds</projectName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters>SCHEME_TYPE</referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+          <filterLength>1</filterLength>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <hudson.model.StringParameterDefinition>
+          <name>BUNDLE_VERSION</name>
+          <description></description>
+          <defaultValue>10</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUNDLE_VERSION_SHORT</name>
+          <description></description>
+          <defaultValue>1.1.2</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>HOCKEY_APP_TOKEN</name>
+          <description></description>
+          <defaultValue>ac85a28805d044c9bf05d1f183b38954</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.55">
+    <script>
+
+node(){
+     PATH_ARCHIVE = &quot;${env.ARCHIVE_PATH}/Archive&quot;
+     PATH_IPA = &quot;${env.IPA_PATH}/Ipa&quot;
+     BUILD_TIME = &quot;${env.BUILD_TIMESTAMP}&quot;
+     
+         echo &quot;BUILD TIME : ${BUILD_TIME}&quot;
+
+     stage(&quot;Pull code&quot;){
+         git credentialsId: &apos;Your_GIT_ID_FROM_CREDENTIALS&apos;, url: &quot;${env.GIT_URL}&quot;, branch: &quot;${env.BRANCH_TO_CHECKOUT}&quot;  
+     } 
+     
+     stage(&quot;Install Pods&quot;){
+         sh &quot;/usr/local/bin/pod install&quot;
+     }
+     stage(&quot;Setting Bundle Version&quot;){
+         sh &quot;defaults write ${WORKSPACE}/Your_Path_To_Info.Plist/Info.plist CFBundleShortVersionString -string ${BUNDLE_VERSION_SHORT} &quot;
+         sh &quot;defaults write ${WORKSPACE}/Your_Path_To_Info.Plist/Info.plist CFBundleVersion -string ${BUNDLE_VERSION} &quot;
+     }
+     stage(&quot;Clean Code&quot;){
+        sh &quot;xcodebuild -workspace Your_WorkSpace_Name.xcworkspace -scheme $SCHEME_NAME -sdk iphoneos clean&quot;
+     }
+     
+     stage(&quot;Creating Folder For Archive&quot;){
+      // Archive : Release , Debug
+      echo &quot;Archive path: $PATH_ARCHIVE&quot;
+	   sh &quot;[ -d $PATH_ARCHIVE/$SCHEME_TYPE ] || mkdir -p $PATH_ARCHIVE/$SCHEME_TYPE&quot;
+     }
+ 
+     
+    stage(&quot;Archive Code&quot;){
+      sh &quot;xcodebuild -workspace Your_WorkSpace_Name.xcworkspace \
+     -scheme $SCHEME_NAME archive -archivePath $PATH_ARCHIVE/$SCHEME_TYPE/Your_Product_Name_${BUILD_TIME}.xcarchive&quot;
+     }
+    stage(&quot;Creating Folder For IPA&quot;){
+      echo &quot;ipa path: $PATH_IPA&quot;
+      sh &quot;[  -d $PATH_IPA/$SCHEME_TYPE ] || mkdir -p $PATH_IPA/$SCHEME_TYPE&quot;
+     }
+    stage(&quot;Extracting IPA&quot;){
+            sh &quot;xcodebuild -exportArchive -archivePath $PATH_ARCHIVE/$SCHEME_TYPE/Your_Product_Name_${BUILD_TIME}.xcarchive -exportPath $PATH_IPA/$SCHEME_TYPE/Your_Product_Name_${BUILD_TIME}.ipa -exportOptionsPlist  ~/Desktop/ExportOptions_${SCHEME_TYPE}.plist&quot;
+    }
+    stage(&quot;Validating and uploading IPA&quot;) {
+        if (env.SCHEME_TYPE == &apos;Release&apos;) {
+        echo &quot;Going to upload On AppStore&quot;
+        sh  &quot;/Applications/Xcode.app/Contents/Applications/Application\\ Loader.app/Contents/Frameworks/ITunesSoftwareService.framework/Support/altool -v -f $PATH_IPA/$SCHEME_TYPE/Your_Product_Name_${BUILD_TIME}.ipa/OneAssist-Swift.ipa -u &quot;${env.USERNAME_APPSTORE}&quot; -p &quot;${env.PASSWORD}&quot; &quot;
+       }else {
+        echo &quot;Going to upload On Hockey&quot;
+        dir(&quot;${PATH_IPA}/${SCHEME_TYPE}/Your_Product_Name_${BUILD_TIME}.ipa&quot;){
+            hockeyApp applications: [[apiToken: &apos;${HOCKEY_APP_TOKEN}&apos;, downloadAllowed: true, filePath: &apos;$SCHEME_NAME.ipa&apos;, mandatory: false, notifyTeam: true, releaseNotesMethod: none(), uploadMethod: appCreation(false)]], debugMode: false, failGracefully: false
+        }
+       }
+    }   
+}
+
+
+
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
